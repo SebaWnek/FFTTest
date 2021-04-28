@@ -11,6 +11,41 @@ namespace FFTTest
         static long t1, t2, t3, t4, t5, t6;
         static void Main(string[] args)
         {
+            TestFFT();
+            //TestOmegas();
+        }
+
+        private static void TestOmegas()
+        {
+            Print(OmegaCalculator.CalculateOmegasBasic(32), true);
+            Console.WriteLine();
+            Print(OmegaCalculator.CalculateOmegasOptimised(32), true);
+            for (int n = 2; n < 12; n++)
+            {
+                int k = (int)Math.Pow(2,n);
+                stopwatch.Restart();
+                for (int i = 0; i < 1000; i++)
+                {
+                    OmegaCalculator.CalculateOmegasBasic(k);
+                }
+                stopwatch.Stop();
+                t1 = stopwatch.ElapsedMilliseconds;
+                t2 = stopwatch.ElapsedTicks;
+                stopwatch.Restart();
+                for (int i = 0; i < 1000; i++)
+                {
+                    OmegaCalculator.CalculateOmegasOptimised(k);
+                }
+                stopwatch.Stop();
+                t3 = stopwatch.ElapsedMilliseconds;
+                t4 = stopwatch.ElapsedTicks;
+                Console.WriteLine($"{k,4} {t1,6} {t2,10} {t3,6} {t4,10} {t2/t4}");
+                //Console.WriteLine($"n = {k}\nBasic: {t1}ms\nOptimised: {t3}ms\nSpeedup: {t2 / t4}x"); 
+            }
+        }
+
+        private static void TestFFT()
+        {
             unsafe
             {
                 int size = sizeof(ComplexFloat);
@@ -18,8 +53,8 @@ namespace FFTTest
             }
             int x = 1024, y = 1024;
             float[,] test = FillRandom(x, y);
+            //float[,] test = { { 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f } };
 
-            //Print(test);
             Console.WriteLine();
             stopwatch.Start();
             ComplexFloat[,] result = FFTSerial.FFT(test);
@@ -50,25 +85,25 @@ namespace FFTTest
             stopwatch.Stop();
             float[,] comparePar = Compare(test, resultPar2);
             t4 = stopwatch.ElapsedMilliseconds;
-            Console.WriteLine(t4 +"ms");
+            Console.WriteLine(t4 + "ms");
 
             stopwatch.Restart();
-            ComplexFloat[,] resultAvx = FFTParallelAvx.FFT(test);
+            ComplexFloat[,] resultAvx = FFTParallelOptimised.FFT(test);
             stopwatch.Stop();
             t5 = stopwatch.ElapsedMilliseconds;
             Console.WriteLine(t5 + "ms");
 
             stopwatch.Restart();
-            float[,] resultAvx2 = FFTParallelAvx.IFFT(resultAvx);
+            float[,] resultAvx2 = FFTParallelOptimised.IFFT(resultAvx);
             stopwatch.Stop();
             t6 = stopwatch.ElapsedMilliseconds;
-            Console.WriteLine(t6+"ms");
+            Console.WriteLine(t6 + "ms");
 
             float[,] compareParAvx = Compare(test, resultAvx2);
             Console.WriteLine();
             Console.WriteLine("Sum of difference:");
             float s1 = Sum(compare);
-            Console.WriteLine("Serial: " + s1 + "\nMean: " + s1/(x*y));
+            Console.WriteLine("Serial: " + s1 + "\nMean: " + s1 / (x * y));
             float s2 = Sum(comparePar);
             Console.WriteLine("Parallel: " + s2 + "\nMean: " + s2 / (x * y));
             float s3 = Sum(compareParAvx);
@@ -83,8 +118,16 @@ namespace FFTTest
             //float s4 = Sum(ifftCompare);
             //Console.WriteLine("IFFT: " + s4 + "\nMean: " + s4/(x*y));
             Console.WriteLine();
-            Console.WriteLine("Speedup Parallel: " + (t1 + t2)/(float)(t3+t4));
-            Console.WriteLine("Speedup Parallel + AVX: " + (t1 + t2) / (float)(t5+t6));
+            Console.WriteLine("Speedup Parallel, only FFT: " + t1/(float)t3);
+            Console.WriteLine("Speedup Parallel Optimised, only FFT: " + t1 / (float)t5);
+            Console.WriteLine("Speedup Parallel: " + (t1 + t2) / (float)(t3 + t4));
+            Console.WriteLine("Speedup Parallel Optimised: " + (t1 + t2) / (float)(t5 + t6));
+
+            //Print(test);
+            //Console.WriteLine();
+
+            //Print(result);
+            //Print(resultAvx);
 
             //Console.WriteLine("\n-------------------------------------------------------------\n");
 

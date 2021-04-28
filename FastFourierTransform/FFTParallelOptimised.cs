@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace FastFourierTransform
 {
-    public static class FFTParallelAvx
+    public static class FFTParallelOptimised
     {
+        static ComplexFloat[][] omegas;
         public static ComplexFloat CalculateOmegaS(int length, bool inverse)
         {
             float l = (float)length;
@@ -36,7 +37,7 @@ namespace FastFourierTransform
         {
             int n = input.Length;
             //Check if array length is power of 2
-            if (!CheckIfPowerOfTwo(n))
+            if (!Helpers.CheckIfPowerOfTwo(n))
             {
                 throw new ArgumentException("Array length must e a power of 2!");
             }
@@ -62,18 +63,6 @@ namespace FastFourierTransform
 
         }
 
-        private static bool CheckIfPowerOfTwo(int n)
-        {
-            if (n == 1) return true;
-            double power = 2;
-            while (power <= n)
-            {
-                if (power == n) return true;
-                power *= 2;
-            }
-            return false;
-        }
-
         public static (ComplexFloat[], ComplexFloat[]) DivideArrayS(ComplexFloat[] input)
         {
             ComplexFloat[] Pe = new ComplexFloat[input.Length / 2];
@@ -86,13 +75,58 @@ namespace FastFourierTransform
             return (Pe, Po);
         }
 
-        public static ComplexFloat[] FFT(float[] input)
+        public static ComplexFloat[] FFT(float[] input, bool newOmegas = true)
         {
-            return FFTBase(input.Convert(), false);
+            return FFT(input.Convert(), newOmegas);
         }
-        public static ComplexFloat[] FFT(ComplexFloat[] input)
+
+        private static ComplexFloat[] FFT(ComplexFloat[] complexFloats, bool newOmegas = true)
         {
-            return FFTBase(input, false);
+            int n = complexFloats.Length;
+            if (!Helpers.CheckIfPowerOfTwo(n))
+            {
+                throw new ArgumentException("Array length must e a power of 2!");
+            }
+            int k = (int)Math.Log2(n);
+            if (newOmegas)
+            {
+                GenerateOmegas(k);
+            }
+            return FFTRecursive(complexFloats, k);
+        }
+
+        private static void GenerateOmegas(int k)
+        {
+            List<ComplexFloat[]> tmp = new List<ComplexFloat[]>();
+            for (int i = 0; i <= k; i++)
+            {
+                tmp.Add(OmegaCalculator.CalculateOmegasOptimised((int)Math.Pow(2, i)));
+            }
+            omegas = tmp.ToArray();
+        }
+
+        public static ComplexFloat[] FFTRecursive(ComplexFloat[] input, int depth)
+        {
+            int n = input.Length;
+            //Check if array length is power of 2
+
+            //If only one element - returns
+            if (n == 1) return input;
+
+            //Dividing into two arrays
+            (ComplexFloat[] pe, ComplexFloat[] po) = DivideArrayS(input);
+
+            ComplexFloat[] ye = FFTRecursive(pe, depth - 1);
+            ComplexFloat[] yo = FFTRecursive(po, depth - 1);
+
+            ComplexFloat[] y = new ComplexFloat[n];
+            int halfn = n / 2;
+            for (int i = 0; i < halfn; i++)
+            {
+                y[i] = ye[i] + omegas[depth][i] * yo[i];
+                y[i + n / 2] = ye[i] - omegas[depth][i] * yo[i];
+            }
+            return y;
         }
 
         public static ComplexFloat[] IFFT(ComplexFloat[] input)
@@ -120,18 +154,32 @@ namespace FastFourierTransform
         {
             int rows = input.GetLength(0);
             int columns = input.GetLength(1);
+
+            int k = (int)Math.Log2(columns);
+            GenerateOmegas(k);
+
+            if (!Helpers.CheckIfPowerOfTwo(rows) || !Helpers.CheckIfPowerOfTwo(columns))
+            {
+                throw new ArgumentException("Array length must be a power of 2!");
+            }
+
             ComplexFloat[,] result = new ComplexFloat[rows, columns];
             Parallel.For(0, rows, (i) =>
+            //for(int i = 0; i < rows; i++)
             {
-                ComplexFloat[] tmpRow = FFT(input.GetRow(i));
+                ComplexFloat[] tmpRow = FFT(input.GetRow(i), false);
                 for (int j = 0; j < columns; j++)
                 {
                     result[i, j] = tmpRow[j];
                 }
             });
+
+            k = (int)Math.Log2(rows);
+            GenerateOmegas(k);
+
             Parallel.For(0, columns, (i) =>
             {
-                ComplexFloat[] tmpCol = FFT(result.GetCol(i));
+                ComplexFloat[] tmpCol = FFT(result.GetCol(i), false);
                 for (int j = 0; j < rows; j++)
                 {
                     result[j, i] = tmpCol[j];

@@ -17,7 +17,9 @@ namespace FastFourierTransform
         public static ComplexDouble CalculateOmegaD(int length, bool inverse)
         {
             //e^(i*x) = cos x + i sin x
-            double exponent = 2 * Math.PI / length; if (!inverse)
+            double exponent = 2 * Math.PI / length; 
+            
+            if (!inverse)
             {
                 return new ComplexDouble(Math.Cos(exponent), Math.Sin(exponent));
             }
@@ -33,7 +35,7 @@ namespace FastFourierTransform
         {
             int n = input.Length;
             //Check if array length is power of 2
-            if (!CheckIfPowerOfTwo(n))
+            if (!Helpers.CheckIfPowerOfTwo(n))
             {
                 throw new ArgumentException("Array length must e a power of 2!");
             }
@@ -57,18 +59,6 @@ namespace FastFourierTransform
             return y;
 
 
-        }
-
-        private static bool CheckIfPowerOfTwo(int n)
-        {
-            if (n == 1) return true;
-            double power = 2;
-            while (power <= n)
-            {
-                if (power == n) return true;
-                power *= 2;
-            }
-            return false;
         }
 
         public static (ComplexFloat[], ComplexFloat[]) DivideArrayS(ComplexFloat[] input)

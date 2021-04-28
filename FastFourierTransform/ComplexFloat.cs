@@ -43,13 +43,14 @@ namespace FastFourierTransform
         public static ComplexFloat operator *(ComplexFloat x, float y) => new ComplexFloat(x.real * y, x.imaginary * y);
         public static ComplexFloat operator /(ComplexFloat x, ComplexFloat y) => x * y.Reciprocal();
         public static ComplexFloat operator /(ComplexFloat x, float y) => new ComplexFloat(x.real / y, x.imaginary / y);
+        public static ComplexFloat operator ^(ComplexFloat x, int y) => x.Pow(y);
 
         public override string ToString()
         {
             return $"{real} + {imaginary}i";
         }
 
-        public ComplexFloat Pow(float exponent)
+        public ComplexFloat Pow(int exponent)
         {
             if (exponent == 0) return new ComplexFloat(1, 0);
             if (exponent == 1) return this;
