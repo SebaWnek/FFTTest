@@ -50,6 +50,9 @@ namespace FastFourierTransform
             return $"{real} + {imaginary}i";
         }
 
+        public ComplexFloat TimesMinusI() => new ComplexFloat(imaginary, -real);
+        public ComplexFloat TimesI() => new ComplexFloat(-imaginary, real);
+
         public ComplexFloat Pow(int exponent)
         {
             if (exponent == 0) return new ComplexFloat(1, 0);

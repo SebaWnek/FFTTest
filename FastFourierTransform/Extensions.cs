@@ -49,5 +49,10 @@ namespace FastFourierTransform
             });
             return result;
         }
+
+        public static ComplexFloat TimesMinusI(this float x)
+        {
+            return new ComplexFloat(0, -x);
+        }
     }
 }

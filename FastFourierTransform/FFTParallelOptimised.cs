@@ -8,7 +8,7 @@ namespace FastFourierTransform
 {
     public static class FFTParallelOptimised
     {
-        static ComplexFloat[][] omegas;
+        public static ComplexFloat[][] omegas;
         public static ComplexFloat CalculateOmegaS(int length, bool inverse)
         {
             float l = (float)length;
@@ -37,12 +37,16 @@ namespace FastFourierTransform
         {
             int n = input.Length;
             //Check if array length is power of 2
-            if (!Helpers.CheckIfPowerOfTwo(n))
-            {
-                throw new ArgumentException("Array length must e a power of 2!");
-            }
+            //if (!Helpers.CheckIfPowerOfTwo(n))
+            //{
+            //    throw new ArgumentException("Array length must e a power of 2!");
+            //}
+
             //If only one element - returns
+
             if (n == 1) return input;
+
+            //if (n == 16) return FFTOptimisedKernels.Kernel16(input, ref omegas);
 
             ComplexFloat omega = CalculateOmegaS(n, inverse);
             //Dividing into two arrays
@@ -83,32 +87,27 @@ namespace FastFourierTransform
         private static ComplexFloat[] FFT(ComplexFloat[] complexFloats, bool newOmegas = true)
         {
             int n = complexFloats.Length;
-            if (!Helpers.CheckIfPowerOfTwo(n))
-            {
-                throw new ArgumentException("Array length must e a power of 2!");
-            }
+            //if (!Helpers.CheckIfPowerOfTwo(n))
+            //{
+            //    throw new ArgumentException("Array length must e a power of 2!");
+            //}
             int k = (int)Math.Log2(n);
             if (newOmegas)
             {
-                GenerateOmegas(k);
+                omegas = OmegaCalculator.GenerateOmegas(k);
             }
             return FFTRecursive(complexFloats, k);
-        }
-
-        private static void GenerateOmegas(int k)
-        {
-            List<ComplexFloat[]> tmp = new List<ComplexFloat[]>();
-            for (int i = 0; i <= k; i++)
-            {
-                tmp.Add(OmegaCalculator.CalculateOmegasOptimised((int)Math.Pow(2, i)));
-            }
-            omegas = tmp.ToArray();
         }
 
         public static ComplexFloat[] FFTRecursive(ComplexFloat[] input, int depth)
         {
             int n = input.Length;
             //Check if array length is power of 2
+
+
+            //if (n == 32) return FFTOptimisedKernels.Kernel32(input, ref omegas);
+            //if (n == 16) return FFTOptimisedKernels.Kernel16(input, ref omegas);
+            if (n == 8) return FFTOptimisedKernels.Kernel8(input, ref omegas);
 
             //If only one element - returns
             if (n == 1) return input;
@@ -155,8 +154,8 @@ namespace FastFourierTransform
             int rows = input.GetLength(0);
             int columns = input.GetLength(1);
 
-            int k = (int)Math.Log2(columns);
-            GenerateOmegas(k);
+            int k = (int)Math.Log2(rows >= columns ? rows : columns);
+            omegas = OmegaCalculator.GenerateOmegas(k);
 
             if (!Helpers.CheckIfPowerOfTwo(rows) || !Helpers.CheckIfPowerOfTwo(columns))
             {
@@ -173,9 +172,6 @@ namespace FastFourierTransform
                     result[i, j] = tmpRow[j];
                 }
             });
-
-            k = (int)Math.Log2(rows);
-            GenerateOmegas(k);
 
             Parallel.For(0, columns, (i) =>
             {

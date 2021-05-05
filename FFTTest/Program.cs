@@ -11,22 +11,76 @@ namespace FFTTest
         static long t1, t2, t3, t4, t5, t6;
         static void Main(string[] args)
         {
-            TestFFT();
-            //TestOmegas();
+            //TestKernels();
+            //TestAVX();
+            //TestFFT();
+            ComplexFloat[] input = { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2,
+                                     1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
+
+
+            stopwatch.Start();
+            ComplexFloat[] result = FFTUnrolled.FFT(ref input);
+            Print(result, true);
+            Console.WriteLine();
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.ElapsedTicks);
+        }
+
+        private static void TestAVX()
+        {
+            float[] test = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
+            float[] tmp = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
+            float[] tmp2 = new float[] { 1, 2, 3, 4, 4, 3, 2, 1 };
+            ComplexFloat[] resultAvx = FFTParallelOptimised.FFT(test);
+            Print(resultAvx, true);
+        }
+
+        private static void TestKernels()
+        {
+            float[] tmp = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
+            ComplexFloat[] test = tmp.Convert();
+
+            FFTParallelOptimised.omegas = OmegaCalculator.GenerateOmegas(4);
+            stopwatch.Start();
+            Print(FFTOptimisedKernels.Kernel16(tmp, ref FFTParallelOptimised.omegas), true);
+            for (int i = 0; i < 1000; i++)
+            {
+                FFTOptimisedKernels.Kernel16(tmp, ref FFTParallelOptimised.omegas);
+            }
+            stopwatch.Stop();
+            t1 = stopwatch.ElapsedTicks;
+
+            Console.WriteLine();
+            stopwatch.Restart();
+            Print(FFTParallelOptimised.FFT(tmp, false), true);
+            for (int i = 0; i < 1000; i++)
+            {
+                FFTParallelOptimised.FFT(tmp, false);
+            }
+            stopwatch.Stop();
+            t2 = stopwatch.ElapsedTicks;
+            Console.WriteLine();
+            Console.WriteLine(t1 + "   " + t2 + "   " + t1 / (float)t2);
         }
 
         private static void TestOmegas()
         {
-            Print(OmegaCalculator.CalculateOmegasBasic(32), true);
+            Print(OmegaCalculator.CalculateOmegasRowBasic(32), true);
             Console.WriteLine();
-            Print(OmegaCalculator.CalculateOmegasOptimised(32), true);
+            Print(OmegaCalculator.CalculateOmegasRowOptimised(32), true);
             for (int n = 2; n < 12; n++)
             {
-                int k = (int)Math.Pow(2,n);
+                int k = (int)Math.Pow(2, n);
                 stopwatch.Restart();
                 for (int i = 0; i < 1000; i++)
                 {
-                    OmegaCalculator.CalculateOmegasBasic(k);
+                    OmegaCalculator.CalculateOmegasRowBasic(k);
                 }
                 stopwatch.Stop();
                 t1 = stopwatch.ElapsedMilliseconds;
@@ -34,12 +88,12 @@ namespace FFTTest
                 stopwatch.Restart();
                 for (int i = 0; i < 1000; i++)
                 {
-                    OmegaCalculator.CalculateOmegasOptimised(k);
+                    OmegaCalculator.CalculateOmegasRowOptimised(k);
                 }
                 stopwatch.Stop();
                 t3 = stopwatch.ElapsedMilliseconds;
                 t4 = stopwatch.ElapsedTicks;
-                Console.WriteLine($"{k,4} {t1,6} {t2,10} {t3,6} {t4,10} {t2/t4}");
+                Console.WriteLine($"{k,4} {t1,6} {t2,10} {t3,6} {t4,10} {t2 / t4}");
                 //Console.WriteLine($"n = {k}\nBasic: {t1}ms\nOptimised: {t3}ms\nSpeedup: {t2 / t4}x"); 
             }
         }
@@ -51,7 +105,7 @@ namespace FFTTest
                 int size = sizeof(ComplexFloat);
                 Console.WriteLine(size);
             }
-            int x = 1024, y = 1024;
+            int x = 1, y = (int)Math.Pow(2, 16);
             float[,] test = FillRandom(x, y);
             //float[,] test = { { 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f, 5f, 3f, 2f, 1f } };
 
@@ -118,7 +172,7 @@ namespace FFTTest
             //float s4 = Sum(ifftCompare);
             //Console.WriteLine("IFFT: " + s4 + "\nMean: " + s4/(x*y));
             Console.WriteLine();
-            Console.WriteLine("Speedup Parallel, only FFT: " + t1/(float)t3);
+            Console.WriteLine("Speedup Parallel, only FFT: " + t1 / (float)t3);
             Console.WriteLine("Speedup Parallel Optimised, only FFT: " + t1 / (float)t5);
             Console.WriteLine("Speedup Parallel: " + (t1 + t2) / (float)(t3 + t4));
             Console.WriteLine("Speedup Parallel Optimised: " + (t1 + t2) / (float)(t5 + t6));
@@ -216,6 +270,21 @@ namespace FFTTest
                 else
                 {
                     Console.Write($"({result[j]}) ");
+                }
+            }
+        }
+        private static void Print2<T>(T[] result, bool vertical = false)
+        {
+
+            for (int j = 0; j < result.Length; j++)
+            {
+                if (vertical)
+                {
+                    Console.WriteLine(result[j]);
+                }
+                else
+                {
+                    Console.Write($"{result[j]}, ");
                 }
             }
         }

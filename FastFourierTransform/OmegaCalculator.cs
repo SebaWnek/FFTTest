@@ -8,7 +8,7 @@ namespace FastFourierTransform
 {
     public static class OmegaCalculator
     {
-        public static ComplexFloat[] CalculateOmegasBasic(int n)
+        public static ComplexFloat[] CalculateOmegasRowBasic(int n)
         {
             //e^(i*x) = cos x + i sin x
             float exponent = (float)(2 * Math.PI / n); 
@@ -24,7 +24,7 @@ namespace FastFourierTransform
             return omegas;
         }
 
-        public static ComplexFloat[] CalculateOmegasOptimised(int n)
+        public static ComplexFloat[] CalculateOmegasRowOptimised(int n)
         {
             if (!Helpers.CheckIfPowerOfTwo(n)) throw new ArgumentException("n must be power of 2");
 
@@ -68,6 +68,16 @@ namespace FastFourierTransform
             }
 
             return omegas;
+        }
+
+        public static ComplexFloat[][] GenerateOmegas(int k)
+        {
+            List<ComplexFloat[]> tmp = new List<ComplexFloat[]>();
+            for (int i = 0; i <= k; i++)
+            {
+                tmp.Add(OmegaCalculator.CalculateOmegasRowOptimised((int)Math.Pow(2, i)));
+            }
+            return tmp.ToArray();
         }
     }
 }
