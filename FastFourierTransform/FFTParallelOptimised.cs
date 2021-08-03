@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FastFourierTransform
@@ -46,7 +47,7 @@ namespace FastFourierTransform
 
             if (n == 1) return input;
 
-            //if (n == 16) return FFTOptimisedKernels.Kernel16(input, ref omegas);
+            if (n == 32) return FFTOptimisedKernels.Kernel32(input, ref omegas);
 
             ComplexFloat omega = CalculateOmegaS(n, inverse);
             //Dividing into two arrays
@@ -106,8 +107,8 @@ namespace FastFourierTransform
 
 
             //if (n == 32) return FFTOptimisedKernels.Kernel32(input, ref omegas);
-            //if (n == 16) return FFTOptimisedKernels.Kernel16(input, ref omegas);
-            if (n == 8) return FFTOptimisedKernels.Kernel8(input, ref omegas);
+            if (n == 16) return FFTOptimisedKernels.Kernel16(input, ref omegas);
+            //if (n == 8) return FFTOptimisedKernels.Kernel8(input, ref omegas);
 
             //If only one element - returns
             if (n == 1) return input;
@@ -128,28 +129,25 @@ namespace FastFourierTransform
             return y;
         }
 
-        public static ComplexFloat[] IFFT(ComplexFloat[] input)
+        public static ComplexFloat[] IFFT(ComplexFloat[] complexFloats, bool newOmegas = true)
         {
-            int length = input.Length;
-            ComplexFloat[] tmp = FFTBase(input, true);
-            for (int i = 0; i < length; i++)
+            int n = complexFloats.Length;
+            //}
+            int k = (int)Math.Log2(n);
+            if (newOmegas)
             {
-                tmp[i] /= length;
+                omegas = OmegaCalculator.GenerateOmegasInverted(k);
             }
-            return tmp;
+            ComplexFloat[] tmp = FFTRecursive(complexFloats, k);
+            ComplexFloat[] tmp2 = new ComplexFloat[n];
+            for(int i = 0; i < n; i++)
+            {
+                tmp2[i] = tmp[i] / n;
+            }
+            return tmp2;
         }
 
-        public static ComplexDouble[] FFT(double[] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static double[] IFFT(ComplexDouble[] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static ComplexFloat[,] FFT(float[,] input)
+        public static ComplexFloat[,] FFTOld(float[,] input)
         {
             int rows = input.GetLength(0);
             int columns = input.GetLength(1);
@@ -184,58 +182,136 @@ namespace FastFourierTransform
             return result;
         }
 
-        public static float[,] IFFT(ComplexFloat[,] input)
+        public static ComplexFloat[,] FFT(float[,] input)
         {
+            int threadCount = Environment.ProcessorCount;
+
             int rows = input.GetLength(0);
             int columns = input.GetLength(1);
+
+            int rowParts = rows / threadCount;
+            int columnParts = columns / threadCount;
+
+            int k = (int)Math.Log2(rows >= columns ? rows : columns);
+            omegas = OmegaCalculator.GenerateOmegas(k);
+
+            if (!Helpers.CheckIfPowerOfTwo(rows) || !Helpers.CheckIfPowerOfTwo(columns))
+            {
+                throw new ArgumentException("Array length must be a power of 2!");
+            }
+
             ComplexFloat[,] result = new ComplexFloat[rows, columns];
-            Parallel.For(0, rows, (i) =>
+
+            Thread[] threads = new Thread[threadCount];
+
+            for (int i = 0; i < threadCount; i++)
             {
-                ComplexFloat[] tmpRow = IFFT(input.GetRow(i));
-                for (int j = 0; j < columns; j++)
+                int tmp = i;
+                threads[i] = new Thread(() =>
                 {
-                    result[i, j] = tmpRow[j];
-                }
-            });
-            Parallel.For(0, columns, (i) =>
+                    ComplexFloat[] tmpRow;
+
+                    for (int k = rowParts * tmp; k < rowParts * (tmp + 1); k++)
+                    {
+                        tmpRow = FFT(input.GetRow(k), false);
+                        for (int j = 0; j < columns; j++)
+                        {
+                            result[k, j] = tmpRow[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
+            for (int i = 0; i < threadCount; i++)
             {
-                ComplexFloat[] tmpCol = IFFT(result.GetCol(i));
-                for (int j = 0; j < rows; j++)
+                int tmp = i;
+                threads[i] = new Thread(() =>
                 {
-                    result[j, i] = tmpCol[j];
-                }
-            });
+                    ComplexFloat[] tmpCol;
+                    for (int k = columnParts * tmp; k < columnParts * (tmp + 1); k++)
+                    {
+                        tmpCol = FFT(result.GetCol(k), false);
+                        for (int j = 0; j < rows; j++)
+                        {
+                            result[j, k] = tmpCol[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
+            return result;
+        }
+
+        public static float[,] IFFT(ComplexFloat[,] input)
+        {
+            int threadCount = Environment.ProcessorCount;
+
+            int rows = input.GetLength(0);
+            int columns = input.GetLength(1);
+
+            int rowParts = rows / threadCount;
+            int columnParts = columns / threadCount;
+
+            int k = (int)Math.Log2(rows >= columns ? rows : columns);
+            omegas = OmegaCalculator.GenerateOmegas(k);
+
+            if (!Helpers.CheckIfPowerOfTwo(rows) || !Helpers.CheckIfPowerOfTwo(columns))
+            {
+                throw new ArgumentException("Array length must be a power of 2!");
+            }
+
+            ComplexFloat[,] result = new ComplexFloat[rows, columns];
+
+            Thread[] threads = new Thread[threadCount];
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                int tmp = i;
+                threads[i] = new Thread(() =>
+                {
+                    ComplexFloat[] tmpRow;
+
+                    for (int k = rowParts * tmp; k < rowParts * (tmp + 1); k++)
+                    {
+                        tmpRow = IFFT(input.GetRow(k), false);
+                        for (int j = 0; j < columns; j++)
+                        {
+                            result[k, j] = tmpRow[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                int tmp = i;
+                threads[i] = new Thread(() =>
+                {
+                    ComplexFloat[] tmpCol;
+                    for (int k = columnParts * tmp; k < columnParts * (tmp + 1); k++)
+                    {
+                        tmpCol = IFFT(result.GetCol(k), false);
+                        for (int j = 0; j < rows; j++)
+                        {
+                            result[j, k] = tmpCol[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
             return result.Convert();
-        }
-
-        public static ComplexDouble[,] FFT(double[,] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static double[,] IFFT(ComplexDouble[,] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static float[,] Shift(float[,] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static double[,] Shift(double[,] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static ComplexFloat[,] Shift(ComplexFloat[,] input)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static ComplexDouble[,] Shift(ComplexDouble[,] input)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -8,15 +8,17 @@ namespace FastFourierTransform
 {
     public static class OmegaCalculator
     {
+
+#region FFT
         public static ComplexFloat[] CalculateOmegasRowBasic(int n)
         {
             //e^(i*x) = cos x + i sin x
-            float exponent = (float)(2 * Math.PI / n); 
+            float exponent = (float)(2 * Math.PI / n);
             ComplexFloat omega = new ComplexFloat((float)Math.Cos(exponent), (float)Math.Sin(exponent));
 
             ComplexFloat[] omegas = new ComplexFloat[n];
 
-            for(int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++)
             {
                 omegas[i] = omega ^ i;
             }
@@ -32,7 +34,7 @@ namespace FastFourierTransform
             {
                 1 => new ComplexFloat[] { new ComplexFloat(1, 0) },
                 2 => new ComplexFloat[] { new ComplexFloat(1, 0) },
-                4 => new ComplexFloat[] { new ComplexFloat(1, 0), new ComplexFloat(0, -1)},
+                4 => new ComplexFloat[] { new ComplexFloat(1, 0), new ComplexFloat(0, -1) },
                 _ => CalculateLargeOmegas(n)
             };
         }
@@ -41,7 +43,7 @@ namespace FastFourierTransform
         {
             int k = n / 4;
 
-            ComplexFloat[] omegas = new ComplexFloat[n/2];
+            ComplexFloat[] omegas = new ComplexFloat[n / 2];
 
             float tmp = 0;
             float tmp2 = 0;
@@ -79,5 +81,65 @@ namespace FastFourierTransform
             }
             return tmp.ToArray();
         }
+        #endregion
+
+        #region IFFT
+        public static ComplexFloat[] CalculateOmegasRowOptimisedInverted(int n)
+        {
+            if (!Helpers.CheckIfPowerOfTwo(n)) throw new ArgumentException("n must be power of 2");
+
+            return n switch
+            {
+                1 => new ComplexFloat[] { new ComplexFloat(1, 0) },
+                2 => new ComplexFloat[] { new ComplexFloat(1, 0) },
+                4 => new ComplexFloat[] { new ComplexFloat(1, 0), new ComplexFloat(0, 1) },
+                _ => CalculateLargeOmegas(n)
+            };
+        }
+
+        private static ComplexFloat[] CalculateLargeOmegasInverted(int n)
+        {
+            int k = n / 4;
+
+            ComplexFloat[] omegas = new ComplexFloat[n / 2];
+
+            float tmp = 0;
+            float tmp2 = 0;
+
+            omegas[0].Re = 1;
+            omegas[k].Im = 1;
+            //omegas[2 * k].Re = -1;
+            //omegas[3 * k].Im = 1;
+
+            for (int i = 1; i < k; i++)
+            {
+                tmp = (float)Math.Cos(i * 2 * (float)Math.PI / n);
+                tmp2 = -tmp;
+
+                omegas[i].Re = tmp;
+                omegas[2 * k - i].Re = tmp2;
+                //omegas[2 * k + i].Re = tmp2;
+                //omegas[n - i].Re = tmp;
+
+                omegas[k - i].Im = tmp;
+                omegas[k + i].Im = tmp;
+                //omegas[3 * k - i].Im = tmp;
+                //omegas[3 * k + i].Im = tmp;
+            }
+
+            return omegas;
+        }
+
+        public static ComplexFloat[][] GenerateOmegasInverted(int k)
+        {
+            List<ComplexFloat[]> tmp = new List<ComplexFloat[]>();
+            for (int i = 0; i <= k; i++)
+            {
+                tmp.Add(OmegaCalculator.CalculateOmegasRowOptimisedInverted((int)Math.Pow(2, i)));
+            }
+            return tmp.ToArray();
+        }
+
+        #endregion
     }
 }

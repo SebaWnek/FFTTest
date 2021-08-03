@@ -50,6 +50,21 @@ namespace FastFourierTransform
             return result;
         }
 
+        public static ComplexFloat[,] Convert(this float[,] x)
+        {
+            int rows = x.GetLength(0);
+            int cols = x.GetLength(1);
+            ComplexFloat[,] result = new ComplexFloat[rows, cols];
+            Parallel.For(0, rows, (i) =>
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    result[i, j] = x[i, j];
+                }
+            });
+            return result;
+        }
+
         public static ComplexFloat TimesMinusI(this float x)
         {
             return new ComplexFloat(0, -x);

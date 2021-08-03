@@ -35,9 +35,9 @@ namespace FastFourierTransform
             result[3] = result[7] = i[0] - i[4] - (i[2] - i[6]).TimesMinusI();
 
             tmp[0] = i[1] + i[3] + i[5] + i[7];
-            tmp[1] = (i[1] - i[5] + (i[3] - i[7]).TimesMinusI())*omegas[3][1];
+            tmp[1] = (i[1] - i[5] + (i[3] - i[7]).TimesMinusI()) * omegas[3][1];
             tmp[2] = (i[1] - i[3] + i[5] - i[7]).TimesMinusI();
-            tmp[3] = (i[1] - i[5] - (i[3] - i[7]).TimesMinusI())*omegas[3][3];
+            tmp[3] = (i[1] - i[5] - (i[3] - i[7]).TimesMinusI()) * omegas[3][3];
 
             fixed (ComplexFloat* pI = i, pRes = result, pTmp = tmp)
             {
@@ -170,9 +170,7 @@ namespace FastFourierTransform
 
             return result;
         }
-        static byte imm8bShuffle = 0b10110001;
-        static byte imm8aImShuffle = 0b10100000;
-        static byte imm8aReShuffle = 0b11110101;
+
         public static unsafe ComplexFloat[] Kernel32(ComplexFloat[] i, ref ComplexFloat[][] omegas)
         {
             ComplexFloat[] result = new ComplexFloat[32];
@@ -181,8 +179,197 @@ namespace FastFourierTransform
             ComplexFloat ami = i[0] - i[8];
             ComplexFloat api = i[0] + i[8];
             ComplexFloat fmn = i[5] - i[13];
-            ComplexFloat fpn = i[5] + i[13]; 
-            
+            ComplexFloat fpn = i[5] + i[13];
+
+            ComplexFloat xami = i[16] - i[24];
+            ComplexFloat xapi = i[16] + i[24];
+            ComplexFloat xfmn = i[21] - i[29];
+            ComplexFloat xfpn = i[21] + i[29];
+
+            tmp[0] = api + i[2] + i[4] + i[6] + i[10] + i[12] + i[14];
+            tmp[1] = ami + (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            tmp[2] = api - i[4] - i[12] + (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            tmp[3] = ami - (i[4] - i[12]).TimesMinusI() - (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()) * omegas[3][3];
+            tmp[4] = api - i[2] + i[4] - i[6] - i[10] + i[12] - i[14];
+            tmp[5] = ami - (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            tmp[6] = api - i[4] - i[12] - (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            tmp[7] = ami - (i[4] - i[12]).TimesMinusI() + (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()).TimesMinusI();
+
+            tmp[8] = i[1] + i[3] + fpn + i[7] + i[9] + i[11] + i[15];
+            tmp[9] = omegas[4][1] * (i[1] - i[9] + (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI());
+            tmp[10] = omegas[4][2] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() + i[1] - fpn + i[9]);
+            tmp[11] = omegas[4][3] * (omegas[3][3] * (i[11] - i[3] + (i[7] - i[15]).TimesMinusI()) - i[1] + i[9] + (fmn).TimesMinusI());
+            tmp[12] = (i[1] - i[3] + fpn - i[7] + i[9] - i[11] - i[15]).TimesMinusI();
+            tmp[13] = (i[1] - i[9] - (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI()) * omegas[4][5];
+            tmp[14] = omegas[4][6] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() - i[1] + fpn - i[9]);
+            tmp[15] = omegas[4][7] * ((i[11] - i[3] + (i[7] - i[15]).TimesMinusI()).TimesMinusI() + i[1] - i[9] - (fmn).TimesMinusI());
+
+            tmp[16] = xapi + i[18] + i[20] + i[22] + i[28] + i[26] + i[30];
+            tmp[17] = xami + (i[18] - i[26] + (i[22] - i[30]).TimesMinusI()) * omegas[3][1] + (i[20] - i[28]).TimesMinusI();
+            tmp[18] = xapi - i[20] - i[28] + (i[18] - i[22] + i[26] - i[30]).TimesMinusI();
+            tmp[19] = xami - (i[20] - i[28]).TimesMinusI() - (i[26] - i[18] + (i[22] - i[30]).TimesMinusI()) * omegas[3][3];
+            tmp[20] = xapi - i[28] + i[20] - i[22] - i[26] + i[28] - i[30];
+            tmp[21] = xami - (i[28] - i[26] + (i[22] - i[30]).TimesMinusI()) * omegas[3][1] + (i[20] - i[22]).TimesMinusI();
+            tmp[22] = xapi - i[20] - i[28] - (i[18] - i[22] + i[26] - i[30]).TimesMinusI();
+            tmp[23] = xami - (i[20] - i[28]).TimesMinusI() + (i[26] - i[18] + (i[22] - i[30]).TimesMinusI()).TimesMinusI();
+
+            tmp[24] = i[17] + i[19] + xfpn + i[23] + i[25] + i[27] + i[31];
+            tmp[25] = omegas[4][1] * (i[17] - i[25] + (i[19] - i[27] + (i[23] - i[31]).TimesMinusI()) * omegas[3][1] + (xfmn).TimesMinusI());
+            tmp[26] = omegas[4][2] * ((i[19] - i[23] + i[27] - i[31]).TimesMinusI() + i[17] - xfpn + i[25]);
+            tmp[27] = omegas[4][3] * (omegas[3][3] * (i[27] - i[19] + (i[23] - i[31]).TimesMinusI()) - i[17] + i[25] + (xfmn).TimesMinusI());
+            tmp[28] = (i[17] - i[19] + xfpn - i[23] + i[25] - i[27] - i[31]).TimesMinusI();
+            tmp[29] = (i[17] - i[25] - (i[19] - i[27] + (i[23] - i[31]).TimesMinusI()) * omegas[3][1] + (xfmn).TimesMinusI()) * omegas[4][5];
+            tmp[30] = omegas[4][6] * ((i[19] - i[23] + i[27] - i[31]).TimesMinusI() - i[17] + xfpn - i[25]);
+            tmp[31] = omegas[4][7] * ((i[27] - i[19] + (i[23] - i[31]).TimesMinusI()).TimesMinusI() + i[17] - i[25] - (xfmn).TimesMinusI());
+
+
+            result[0] = tmp[0] + tmp[8];
+            result[1] = tmp[1] + tmp[9];
+            result[2] = tmp[2] + tmp[10];
+            result[3] = tmp[3] + tmp[11];
+            result[4] = tmp[4] + tmp[12];
+            result[5] = tmp[5] + tmp[13];
+            result[6] = tmp[6] + tmp[14];
+            result[7] = tmp[7] + tmp[15];
+
+            result[8] = tmp[0] - tmp[8];
+            result[9] = tmp[1] - tmp[9];
+            result[10] = tmp[2] - tmp[10];
+            result[11] = tmp[3] - tmp[11];
+            result[12] = tmp[4] - tmp[12];
+            result[13] = tmp[5] - tmp[13];
+            result[14] = tmp[6] - tmp[14];
+            result[15] = tmp[7] - tmp[15];
+
+            result[16] = tmp[16] + tmp[24];
+            result[17] = tmp[17] + tmp[25];
+            result[18] = tmp[18] + tmp[26];
+            result[19] = tmp[19] + tmp[27];
+            result[20] = tmp[20] + tmp[28];
+            result[21] = tmp[21] + tmp[29];
+            result[22] = tmp[22] + tmp[30];
+            result[23] = tmp[23] + tmp[31];
+
+            result[24] = tmp[16] - tmp[24];
+            result[25] = tmp[17] - tmp[25];
+            result[26] = tmp[18] - tmp[26];
+            result[27] = tmp[19] - tmp[27];
+            result[28] = tmp[20] - tmp[28];
+            result[29] = tmp[21] - tmp[29];
+            result[30] = tmp[22] - tmp[30];
+            result[31] = tmp[23] - tmp[31];
+
+
+
+            tmp[0] = result[0] + result[8];
+            tmp[1] = result[1] + result[9];
+            tmp[2] = result[2] + result[10];
+            tmp[3] = result[3] + result[11];
+            tmp[4] = result[4] + result[12];
+            tmp[5] = result[5] + result[13];
+            tmp[6] = result[6] + result[14];
+            tmp[7] = result[7] + result[15];
+
+            tmp[8] = result[0] - result[8];
+            tmp[9] = result[1] - result[9];
+            tmp[10] = result[2] - result[10];
+            tmp[11] = result[3] - result[11];
+            tmp[12] = result[4] - result[12];
+            tmp[13] = result[5] - result[13];
+            tmp[14] = result[6] - result[14];
+            tmp[15] = result[7] - result[15];
+
+            tmp[16] = result[16] + result[24];
+            tmp[17] = result[17] + result[25];
+            tmp[18] = result[18] + result[26];
+            tmp[19] = result[19] + result[27];
+            tmp[20] = result[20] + result[28];
+            tmp[21] = result[21] + result[29];
+            tmp[22] = result[22] + result[30];
+            tmp[23] = result[23] + result[31];
+
+            tmp[24] = result[16] - result[24];
+            tmp[25] = result[17] - result[25];
+            tmp[26] = result[18] - result[26];
+            tmp[27] = result[19] - result[27];
+            tmp[28] = result[20] - result[28];
+            tmp[29] = result[21] - result[29];
+            tmp[30] = result[22] - result[30];
+            tmp[31] = result[23] - result[31];
+
+            tmp[32] = tmp[16];
+            tmp[33] = tmp[17] * omegas[5][1];
+            tmp[34] = tmp[18] * omegas[5][2];
+            tmp[35] = tmp[19] * omegas[5][3];
+            tmp[36] = tmp[20] * omegas[5][4];
+            tmp[37] = tmp[21] * omegas[5][5];
+            tmp[38] = tmp[22] * omegas[5][6];
+            tmp[39] = tmp[23] * omegas[5][7];
+
+            tmp[40] = tmp[24].TimesMinusI();
+            tmp[41] = tmp[25] * omegas[5][9];
+            tmp[42] = tmp[26] * omegas[5][10];
+            tmp[43] = tmp[27] * omegas[5][11];
+            tmp[44] = tmp[28] * omegas[5][12];
+            tmp[45] = tmp[29] * omegas[5][13];
+            tmp[46] = tmp[30] * omegas[5][14];
+            tmp[47] = tmp[31] * omegas[5][15];
+
+
+
+
+            result[0] = tmp[0] + tmp[16];
+            result[1] = tmp[1] + tmp[17];
+            result[2] = tmp[2] + tmp[18];
+            result[3] = tmp[3] + tmp[19];
+            result[4] = tmp[4] + tmp[20];
+            result[5] = tmp[5] + tmp[21];
+            result[6] = tmp[6] + tmp[22];
+            result[7] = tmp[7] + tmp[23];
+
+            result[8] = tmp[8] + tmp[24];
+            result[9] = tmp[9] + tmp[25];
+            result[10] = tmp[10] + tmp[26];
+            result[11] = tmp[11] + tmp[27];
+            result[12] = tmp[12] + tmp[28];
+            result[13] = tmp[13] + tmp[29];
+            result[14] = tmp[14] + tmp[30];
+            result[15] = tmp[15] + tmp[31];
+
+            result[16] = tmp[0] + tmp[32];
+            result[17] = tmp[1] + tmp[33];
+            result[18] = tmp[2] + tmp[34];
+            result[19] = tmp[3] + tmp[35];
+            result[20] = tmp[4] + tmp[36];
+            result[21] = tmp[5] + tmp[37];
+            result[22] = tmp[6] + tmp[38];
+            result[23] = tmp[7] + tmp[39];
+
+            result[24] = tmp[8] + tmp[40];
+            result[25] = tmp[9] + tmp[41];
+            result[26] = tmp[10] + tmp[42];
+            result[27] = tmp[11] + tmp[43];
+            result[28] = tmp[12] + tmp[44];
+            result[29] = tmp[13] + tmp[45];
+            result[30] = tmp[14] + tmp[46];
+            result[31] = tmp[15] + tmp[47];
+
+            return result;
+        }
+
+        static byte imm8bShuffle = 0b10110001;
+        static byte imm8aImShuffle = 0b10100000;
+        static byte imm8aReShuffle = 0b11110101;
+        public static unsafe ComplexFloat[] Kernel32avx(ComplexFloat[] i, ref ComplexFloat[][] omegas)
+        {
+            ComplexFloat[] result = new ComplexFloat[32];
+            ComplexFloat[] tmp = new ComplexFloat[48];
+
+            ComplexFloat ami = i[0] - i[8];
+            ComplexFloat api = i[0] + i[8];
+            ComplexFloat fmn = i[5] - i[13];
+            ComplexFloat fpn = i[5] + i[13];
+
             ComplexFloat xami = i[16] - i[24];
             ComplexFloat xapi = i[16] + i[24];
             ComplexFloat xfmn = i[21] - i[29];
@@ -230,7 +417,7 @@ namespace FastFourierTransform
             //AVX takes 8 floats at once, so will calculate in halves of those parts
             //Tmp will ocntain 6 octets
 
-            fixed (ComplexFloat* entry = result, om5 = omegas[5], t = tmp )
+            fixed (ComplexFloat* entry = result, om5 = omegas[5], t = tmp)
             {
                 Vector256<float> a;
                 Vector256<float> b;
@@ -326,7 +513,7 @@ namespace FastFourierTransform
 
                 //Tmp[4] = omega * (C+D)
                 a = Avx2.LoadVector256(tmpPart3);
-                b = Avx2.LoadVector256(omPart1+8);
+                b = Avx2.LoadVector256(omPart1 + 8);
                 bSwap = Avx2.Shuffle(b, b, imm8bShuffle);
                 aIm = Avx2.Shuffle(a, a, imm8aImShuffle);
                 aRe = Avx2.Shuffle(a, a, imm8aReShuffle);
@@ -335,7 +522,7 @@ namespace FastFourierTransform
 
                 //Tmp[4] = omega * (C-D)
                 a = Avx2.LoadVector256(tmpPart4);
-                b = Avx2.LoadVector256(omPart2+8);
+                b = Avx2.LoadVector256(omPart2 + 8);
                 bSwap = Avx2.Shuffle(b, b, imm8bShuffle);
                 aIm = Avx2.Shuffle(a, a, imm8aImShuffle);
                 aRe = Avx2.Shuffle(a, a, imm8aReShuffle);

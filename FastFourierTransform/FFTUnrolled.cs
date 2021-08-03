@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FastFourierTransform
@@ -25,6 +26,7 @@ namespace FastFourierTransform
         static byte imm8bShuffle = 0b10110001;
         static byte imm8aImShuffle = 0b11110101;
         static byte imm8aReShuffle = 0b10100000;
+
         public static ComplexFloat[] ShuffleNumbers(ComplexFloat[] input, bool newMap = true)
         {
             int n = input.Length;
@@ -39,26 +41,70 @@ namespace FastFourierTransform
             return result;
         }
 
-        public static ComplexFloat[,] ShuffleNumbers(ComplexFloat[,] input, bool newMap = true)
+        public static ComplexFloat[][] ShuffleNumbers(ComplexFloat[,] input, bool newMap = true)
         {
             int rows = input.GetLength(0);
             int cols = input.GetLength(1);
             int currentCol = 0;
 
             if (newMap) map = BitReverse.GenerateMap((int)Math.Log2(rows));
-            ComplexFloat[,] result = new ComplexFloat[cols, rows];
+            ComplexFloat[][] result = new ComplexFloat[cols][];
+
+            for (int i = 0; i < cols; i++)
+            {
+                result[i] = new ComplexFloat[rows]; 
+            }
 
             for (int i = 0; i < rows; i++)
             {
                 currentCol = map[i];
                 for (int j = 0; j < cols; j++)
                 {
-                    result[j, currentCol] = input[i, j];
+                    result[j][currentCol] = input[i, j];
                 }
             }
 
             return result;
         }
+
+        public static ComplexFloat[,] InverseShuffleNumbers(ComplexFloat[][] input)
+        {
+            int rows = input.GetLength(0);
+            int cols = input.GetLength(1);
+
+            ComplexFloat[,] result = new ComplexFloat[cols, rows];
+
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    result[j, i] = input[i][j];
+                }
+            }
+
+            return result;
+        }
+
+        //public static unsafe ComplexFloat[,] FFT(ref ComplexFloat[,] input)
+        //{
+        //    int rows = input.GetLength(0);
+        //    int cols = input.GetLength(1);
+        //    ComplexFloat[][] tmpResult = new ComplexFloat[rows][];
+        //    int threadCount = Environment.ProcessorCount;
+        //    Thread[] threads = new Thread[threadCount];
+        //    int portion = rows / threadCount;
+
+        //    for(int i = 0; i < threadCount; i++)
+        //    {
+        //        threads[i] = new Thread(() =>
+        //        {
+        //            for(int j = i * portion; j <  (i+1)*portion; j++)
+        //            {
+        //                tmpResult[j] = FFT(ref input.GetRow(j));
+        //            }
+        //        });
+        //    }
+        //}
 
         public static unsafe ComplexFloat[] FFT(ref ComplexFloat[] input, bool generateMapOmegas = true)
         {
@@ -68,6 +114,7 @@ namespace FastFourierTransform
             int additRuns = runs - 6;
             int tmpShift = 0;
             int tmpJump = 0;
+            int tmpOmegaShift = 0;
 
             Vector256<float> partA, partB, partC, partD, partE, partF, partG, partH, partI, partJ, partK, partL, partM, partN, partO, partP;
             Vector256<float> partAs, partBs, partCs, partDs, partEs, partFs, partGs, partHs, partIs, partJs, partKs, partLs, partMs, partNs, partOs, partPs;
@@ -688,67 +735,77 @@ namespace FastFourierTransform
 
                 #region L7+
 
-                for (int i = 1; i <= k-6; i++)
+                for (int i = 0; i < k - 6; i++)
                 {
-                    fixed (ComplexFloat* omPtr = omegas[i+6])
+                    fixed (ComplexFloat* omPtr = omegas[i + 7])
                     {
                         tmpShift = 0;
-                        tmpJump = (int)Math.Pow(2, i-1);
+                        tmpJump = (int)Math.Pow(2, i);
+                        tmpOmegaShift = 0;
                         for (int j = 0; j < runs / 2; j++)
                         {
-                            if (j % i == 0) tmpShift = j * 2;
-                            else tmpShift += 1;
+                            if (j % tmpJump == 0)
+                            {
+                                tmpShift = j * 2;
+                                tmpOmegaShift = 0;
+                            }
+                            else
+                            {
+                                tmpShift += 1;
+                                tmpOmegaShift += 1;
+                            }
 
-                            partA = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 0  );
-                            partB = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 8  );
-                            partC = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 16 );
-                            partD = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 24 );
-                            partE = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 32 );
-                            partF = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 40 );
-                            partG = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 48 );
-                            partH = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 56 );
-                            partI = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 64 );
-                            partJ = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 72 );
-                            partK = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 80 );
-                            partL = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 88 );
-                            partM = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 96 );
+                            partA = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 0);
+                            partB = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 8);
+                            partC = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 16);
+                            partD = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 24);
+                            partE = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 32);
+                            partF = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 40);
+                            partG = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 48);
+                            partH = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 56);
+                            partI = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 64);
+                            partJ = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 72);
+                            partK = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 80);
+                            partL = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 88);
+                            partM = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 96);
                             partN = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 104);
                             partO = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 112);
                             partP = Avx2.LoadVector256(tmpShift * addressShift + rPtr + 120);
 
-                            partAs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 0  );
-                            partBs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 8  );
-                            partCs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 16 );
-                            partDs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 24 );
-                            partEs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 32 );
-                            partFs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 40 );
-                            partGs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 48 );
-                            partHs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 56 );
-                            partIs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 64 );
-                            partJs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 72 );
-                            partKs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 80 );
-                            partLs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 88 );
-                            partMs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 96 );
+                            partAs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 0);
+                            partBs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 8);
+                            partCs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 16);
+                            partDs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 24);
+                            partEs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 32);
+                            partFs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 40);
+                            partGs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 48);
+                            partHs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 56);
+                            partIs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 64);
+                            partJs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 72);
+                            partKs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 80);
+                            partLs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 88);
+                            partMs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 96);
                             partNs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 104);
                             partOs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 112);
                             partPs = Avx2.LoadVector256((tmpShift + tmpJump) * addressShift + rPtr + 120);
 
-                            omA = Avx2.LoadVector256((float*)(omPtr + 0));
-                            omB = Avx2.LoadVector256((float*)(omPtr + 4));
-                            omC = Avx2.LoadVector256((float*)(omPtr + 8));
-                            omD = Avx2.LoadVector256((float*)(omPtr + 12));
-                            omE = Avx2.LoadVector256((float*)(omPtr + 16));
-                            omF = Avx2.LoadVector256((float*)(omPtr + 20));
-                            omG = Avx2.LoadVector256((float*)(omPtr + 24));
-                            omH = Avx2.LoadVector256((float*)(omPtr + 28));
-                            omI = Avx2.LoadVector256((float*)(omPtr + 32));
-                            omJ = Avx2.LoadVector256((float*)(omPtr + 36));
-                            omK = Avx2.LoadVector256((float*)(omPtr + 40));
-                            omL = Avx2.LoadVector256((float*)(omPtr + 44));
-                            omM = Avx2.LoadVector256((float*)(omPtr + 48));
-                            omN = Avx2.LoadVector256((float*)(omPtr + 52));
-                            omO = Avx2.LoadVector256((float*)(omPtr + 56));
-                            omP = Avx2.LoadVector256((float*)(omPtr + 60));
+                            //Omegas are casted so need incrementation by 4, not 8
+                            omA = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 0));
+                            omB = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 4));
+                            omC = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 8));
+                            omD = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 12));
+                            omE = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 16));
+                            omF = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 20));
+                            omG = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 24));
+                            omH = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 28));
+                            omI = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 32));
+                            omJ = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 36));
+                            omK = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 40));
+                            omL = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 44));
+                            omM = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 48));
+                            omN = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 52));
+                            omO = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 56));
+                            omP = Avx2.LoadVector256((float*)(tmpOmegaShift * portion + omPtr + 60));
 
                             bSwapA = Avx2.Shuffle(omA, omA, imm8bShuffle);
                             bSwapB = Avx2.Shuffle(omB, omB, imm8bShuffle);
@@ -757,7 +814,7 @@ namespace FastFourierTransform
                             bSwapE = Avx2.Shuffle(omE, omE, imm8bShuffle);
                             bSwapF = Avx2.Shuffle(omF, omF, imm8bShuffle);
                             bSwapG = Avx2.Shuffle(omG, omG, imm8bShuffle);
-                            bSwapH = Avx2.Shuffle(omH, omH, imm8bShuffle); 
+                            bSwapH = Avx2.Shuffle(omH, omH, imm8bShuffle);
                             bSwapI = Avx2.Shuffle(omI, omI, imm8bShuffle);
                             bSwapJ = Avx2.Shuffle(omJ, omJ, imm8bShuffle);
                             bSwapK = Avx2.Shuffle(omK, omK, imm8bShuffle);
@@ -847,36 +904,36 @@ namespace FastFourierTransform
                             aIm_bSwap = Avx.Multiply(aIm, bSwapP);
                             tmpP = Fma.MultiplyAddSubtract(aRe, omP, aIm_bSwap);
 
-                            Avx2.Store(tmpShift * addressShift + rPtr + 0  , Avx2.Add(partA, tmpA));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 8  , Avx2.Add(partB, tmpB));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 16 , Avx2.Add(partC, tmpC));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 24 , Avx2.Add(partD, tmpD));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 32 , Avx2.Add(partE, tmpE));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 40 , Avx2.Add(partF, tmpF));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 48 , Avx2.Add(partG, tmpG));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 56 , Avx2.Add(partH, tmpH));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 64 , Avx2.Add(partI, tmpI));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 72 , Avx2.Add(partJ, tmpJ));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 80 , Avx2.Add(partK, tmpK));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 88 , Avx2.Add(partL, tmpL));
-                            Avx2.Store(tmpShift * addressShift + rPtr + 96 , Avx2.Add(partM, tmpM));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 0, Avx2.Add(partA, tmpA));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 8, Avx2.Add(partB, tmpB));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 16, Avx2.Add(partC, tmpC));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 24, Avx2.Add(partD, tmpD));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 32, Avx2.Add(partE, tmpE));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 40, Avx2.Add(partF, tmpF));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 48, Avx2.Add(partG, tmpG));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 56, Avx2.Add(partH, tmpH));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 64, Avx2.Add(partI, tmpI));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 72, Avx2.Add(partJ, tmpJ));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 80, Avx2.Add(partK, tmpK));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 88, Avx2.Add(partL, tmpL));
+                            Avx2.Store(tmpShift * addressShift + rPtr + 96, Avx2.Add(partM, tmpM));
                             Avx2.Store(tmpShift * addressShift + rPtr + 104, Avx2.Add(partN, tmpN));
                             Avx2.Store(tmpShift * addressShift + rPtr + 112, Avx2.Add(partO, tmpO));
                             Avx2.Store(tmpShift * addressShift + rPtr + 120, Avx2.Add(partP, tmpP));
-                                        
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 0  , Avx2.Subtract(partA, tmpA));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 8  , Avx2.Subtract(partB, tmpB));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 16 , Avx2.Subtract(partC, tmpC));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 24 , Avx2.Subtract(partD, tmpD));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 32 , Avx2.Subtract(partE, tmpE));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 40 , Avx2.Subtract(partF, tmpF));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 48 , Avx2.Subtract(partG, tmpG));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 56 , Avx2.Subtract(partH, tmpH));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 64 , Avx2.Subtract(partI, tmpI));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 72 , Avx2.Subtract(partJ, tmpJ));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 80 , Avx2.Subtract(partK, tmpK));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 88 , Avx2.Subtract(partL, tmpL));
-                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 96 , Avx2.Subtract(partM, tmpM));
+
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 0, Avx2.Subtract(partA, tmpA));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 8, Avx2.Subtract(partB, tmpB));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 16, Avx2.Subtract(partC, tmpC));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 24, Avx2.Subtract(partD, tmpD));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 32, Avx2.Subtract(partE, tmpE));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 40, Avx2.Subtract(partF, tmpF));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 48, Avx2.Subtract(partG, tmpG));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 56, Avx2.Subtract(partH, tmpH));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 64, Avx2.Subtract(partI, tmpI));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 72, Avx2.Subtract(partJ, tmpJ));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 80, Avx2.Subtract(partK, tmpK));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 88, Avx2.Subtract(partL, tmpL));
+                            Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 96, Avx2.Subtract(partM, tmpM));
                             Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 104, Avx2.Subtract(partN, tmpN));
                             Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 112, Avx2.Subtract(partO, tmpO));
                             Avx2.Store((tmpShift + tmpJump) * addressShift + rPtr + 120, Avx2.Subtract(partP, tmpP));
