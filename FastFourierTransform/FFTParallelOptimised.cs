@@ -247,6 +247,71 @@ namespace FastFourierTransform
 
             return result;
         }
+        public static ComplexFloat[,] FFT(ComplexFloat[,] input)
+        {
+            int threadCount = Environment.ProcessorCount;
+
+            int rows = input.GetLength(0);
+            int columns = input.GetLength(1);
+
+            int rowParts = rows / threadCount;
+            int columnParts = columns / threadCount;
+
+            int k = (int)Math.Log2(rows >= columns ? rows : columns);
+            omegas = OmegaCalculator.GenerateOmegas(k);
+
+            if (!Helpers.CheckIfPowerOfTwo(rows) || !Helpers.CheckIfPowerOfTwo(columns))
+            {
+                throw new ArgumentException("Array length must be a power of 2!");
+            }
+
+            ComplexFloat[,] result = new ComplexFloat[rows, columns];
+
+            Thread[] threads = new Thread[threadCount];
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                int tmp = i;
+                threads[i] = new Thread(() =>
+                {
+                    ComplexFloat[] tmpRow;
+
+                    for (int k = rowParts * tmp; k < rowParts * (tmp + 1); k++)
+                    {
+                        tmpRow = FFT(input.GetRow(k), false);
+                        for (int j = 0; j < columns; j++)
+                        {
+                            result[k, j] = tmpRow[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                int tmp = i;
+                threads[i] = new Thread(() =>
+                {
+                    ComplexFloat[] tmpCol;
+                    for (int k = columnParts * tmp; k < columnParts * (tmp + 1); k++)
+                    {
+                        tmpCol = FFT(result.GetCol(k), false);
+                        for (int j = 0; j < rows; j++)
+                        {
+                            result[j, k] = tmpCol[j];
+                        }
+                    }
+                });
+                threads[i].Start();
+            }
+
+            foreach (Thread t in threads) t.Join();
+
+            return result;
+        }
 
         public static float[,] IFFT(ComplexFloat[,] input)
         {

@@ -1,7 +1,13 @@
 ﻿using FastFourierTransform;
 using System;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace FFTTest
 {
@@ -82,38 +88,135 @@ namespace FFTTest
             //                         1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
 
 
-            for (int i = 0; i < 100; i++)
-            {
-                int size = (int)Math.Pow(2, 11);
-                Console.WriteLine("Size: " + size);
-                Console.WriteLine();
-                float[,] inputFloat = new float[size, size];
-                inputFloat = FillRandom(size, size);
-                ComplexFloat[,] input = inputFloat.Convert();
-                ComplexFloat[,] result;
-                float[,] resultBack;
-                double t1, t2;
+            //double t1 = 0, t2 = 0, t3 = 0;
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    int size = (int)Math.Pow(2, 11);
+            //    Console.WriteLine("Size: " + size);
+            //    Console.WriteLine();
+            //    float[,,] inputFloat = new float[size, size, 3];
+            //    inputFloat = FillRandom(size, size, 3);
+            //    //ComplexFloat[,] input = inputFloat.Convert();
+            //    ComplexFloat[,] result;
+            //    float[,] resultBack;
 
-                PrintSum(input);
-                stopwatch.Restart();
-                result = FFTParallelOptimised.FFT(inputFloat);
-                stopwatch.Stop();
-                //Print(result, true);
-                Console.WriteLine();
-                Console.WriteLine(t1 = stopwatch.ElapsedMilliseconds);
-                //time2 += stopwatch.ElapsedMilliseconds;
-                PrintSum(result);
-                stopwatch.Restart();
-                resultBack = FFTParallelOptimised.IFFT(result);
-                stopwatch.Stop();
-                Console.WriteLine();
-                Console.WriteLine(t2 = stopwatch.ElapsedMilliseconds);
-                PrintSum(resultBack.Convert());
-                Console.WriteLine();
-                Console.WriteLine("Result: " + t1 / t2);
-                Console.WriteLine();
+            //    //PrintSum(input);
+            //    //stopwatch.Restart();
+            //    //result = FFTParallelOptimised.FFT(inputFloat);
+            //    //stopwatch.Stop();
+            //    ////Print(result, true);
+            //    //Console.WriteLine();
+            //    //Console.WriteLine(t1 = stopwatch.ElapsedMilliseconds);
+            //    ////time2 += stopwatch.ElapsedMilliseconds;
+            //    //PrintSum(result);
+            //    //stopwatch.Restart();
+            //    //resultBack = FFTParallelOptimised.IFFT(result);
+            //    //stopwatch.Stop();
+            //    //Console.WriteLine();
+            //    //Console.WriteLine(t2 = stopwatch.ElapsedMilliseconds);
+            //    //PrintSum(resultBack.Convert());
+            //    //Console.WriteLine();
+            //    //Console.WriteLine("Result: " + t1 / t2);
+            //    //Console.WriteLine();
+
+            //    stopwatch.Restart();
+            //    result = Helpers.ImportFromRGB(inputFloat);
+            //    stopwatch.Stop();
+            //    Console.WriteLine("Basic: " + stopwatch.ElapsedMilliseconds);
+            //    t1 += stopwatch.ElapsedTicks;
+            //    result = null;
+
+            //    stopwatch.Restart();
+            //    result = Helpers.ImportFromRGBThreads(inputFloat);
+            //    stopwatch.Stop();
+            //    Console.WriteLine("Threads: " + stopwatch.ElapsedMilliseconds);
+            //    t2 += stopwatch.ElapsedTicks;
+            //    result = null;
+
+            //    stopwatch.Restart();
+            //    result = Helpers.ImportFromRGBParallel(inputFloat);
+            //    stopwatch.Stop();
+            //    Console.WriteLine("Parallel: " + stopwatch.ElapsedMilliseconds);
+            //    t3 += stopwatch.ElapsedTicks;
+            //    result = null;
+
+            //    Console.WriteLine();
+            //}
+            //Console.WriteLine($"Basic: {t1}\nThreads: {t2} {t1/t2}x\nParallel: {t3} {t1/t3}x");
+
+            byte[] data = GetBytes().GetAwaiter().GetResult();
+            int width = 512;
+
+            ComplexFloat[,] result = Helpers.ImportFromRGB(data, width);
+            ComplexFloat[,] fft = FFTParallelOptimised.FFT(result);
+            float[,] ifft = FFTParallelOptimised.IFFT(fft);
+            byte[] bytes = FloatToByte(ifft);
+
+            PrintSum(result);
+            PrintSum(ifft);
+
+            //Print(ifft);
+
+            Bitmap bmp = new Bitmap(width, width, PixelFormat.Format32bppArgb);
+            Rectangle rectangle = new Rectangle(0, 0, width, width);
+            BitmapData bitmapData = bmp.LockBits(rectangle, ImageLockMode.WriteOnly, bmp.PixelFormat);
+            IntPtr ptr = bitmapData.Scan0;
+            Marshal.Copy(bytes, 0, ptr, bytes.Length);
+            bmp.UnlockBits(bitmapData);
+            bmp.Save("img.bmp", ImageFormat.Bmp);
+
+        }
+
+        private static byte[] FloatToByte(float[,] ifft)
+        {
+            byte[] result = new byte[ifft.Length * 4];
+            for(int i = 0; i < ifft.GetLength(0); i++)
+            {
+                for(int j = 0; j < ifft.GetLength(1); j++)
+                {
+                    result[4 * i * ifft.GetLength(0) + 4 * j] = (byte)Math.Round(ifft[i, j]);
+                    result[4 * i * ifft.GetLength(0) + 4 * j + 1] = (byte)Math.Round(ifft[i, j]);
+                    result[4 * i * ifft.GetLength(0) + 4 * j + 2] = (byte)Math.Round(ifft[i, j]);
+                    result[4 * i * ifft.GetLength(0) + 4 * j + 3] = 255;
+                }
+            }
+            return result;
+        }
+
+        private static async Task<byte[]> GetBytes()
+        {
+            byte[] array;
+            Bitmap image;
+
+            HttpClient client = new HttpClient();
+
+            image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/cartest.jpg")));
+            client.Dispose();
+            Rectangle rectanle = new Rectangle(0, 0, image.Width, image.Height);
+            BitmapData data = image.LockBits(rectanle, ImageLockMode.ReadWrite, image.PixelFormat);
+            int bytes = Math.Abs(data.Stride) * image.Height;
+            array = new byte[bytes];
+            IntPtr ptr = data.Scan0;
+            System.Runtime.InteropServices.Marshal.Copy(ptr, array, 0, bytes);
+            return array;
+        }
+
+        private static void PrintSum(float[,] result)
+        {
+            int rows = result.GetLength(0);
+            int cols = result.GetLength(1);
+
+            double tmpSum = 0;
+
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    tmpSum += result[i, j];
+                }
             }
 
+            Console.WriteLine(tmpSum);
         }
 
         private static void PrintSum(ComplexFloat[,] result)
@@ -326,6 +429,21 @@ namespace FFTTest
                 for (int j = 0; j < v2; j++)
                 {
                     result[i, j] = rnd.Next(256);
+                }
+            }
+            return result;
+        }
+        private static float[,,] FillRandom(int v1, int v2, int v3)
+        {
+            float[,,] result = new float[v1, v2, v3];
+            for (int i = 0; i < v1; i++)
+            {
+                for (int j = 0; j < v2; j++)
+                {
+                    for (int k = 0; k < v3; k++)
+                    {
+                        result[i, j, k] = rnd.Next(256);
+                    }
                 }
             }
             return result;
