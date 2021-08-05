@@ -15,6 +15,12 @@ namespace FastFourierTransform
         {
             return input;
         }
+
+        public static ComplexDouble[] Kernel1(ComplexDouble[] input, ref ComplexDouble[][] omegas)
+        {
+            return input;
+        }
+
         //public static ComplexFloat[] Kernel2(ComplexFloat[] input)
         //{
 
@@ -116,6 +122,61 @@ namespace FastFourierTransform
             return result;
         }
 
+        public static ComplexDouble[] Kernel16(double[] i, ref ComplexDouble[][] omegas)
+        {
+            ComplexDouble[] result = new ComplexDouble[16];
+            ComplexDouble[] tmp3 = new ComplexDouble[8];
+
+            ComplexDouble ami = i[0] - i[8];
+            ComplexDouble api = i[0] + i[8];
+            ComplexDouble fmn = i[5] - i[13];
+            ComplexDouble fpn = i[5] + i[13];
+
+            double tmp = i[1] + i[3] + i[5] + i[7] + i[9] + i[11] + i[13] + i[15];
+            tmp3[1] = omegas[4][1] * (i[1] - i[9] + (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI());
+            tmp3[2] = omegas[4][2] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() + i[1] - fpn + i[9]);
+            tmp3[3] = omegas[4][3] * (omegas[3][3] * (i[11] - i[3] + (i[7] - i[15]).TimesMinusI()) - i[1] + i[9] + (fmn).TimesMinusI());
+            tmp3[4] = (i[1] - i[3] + fpn - i[7] + i[9] - i[11] - i[15]).TimesMinusI();
+            tmp3[5] = (i[1] - i[9] - (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI()) * omegas[4][5];
+            tmp3[6] = omegas[4][6] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() - i[1] + fpn - i[9]);
+            tmp3[7] = omegas[4][7] * ((i[11] - i[3] + (i[7] - i[15]).TimesMinusI()).TimesMinusI() + i[1] - i[9] - (fmn).TimesMinusI());
+
+            result[0] = result[8] = api + i[2] + i[4] + i[6] + i[10] + i[12] + i[14];
+            result[1] = result[9] = ami + (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            result[2] = result[10] = api - i[4] - i[12] + (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            result[3] = result[11] = ami - (i[4] - i[12]).TimesMinusI() - (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()) * omegas[3][3];
+            result[4] = result[12] = api - i[2] + i[4] - i[6] - i[10] + i[12] - i[14];
+            result[5] = result[13] = ami - (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            result[6] = result[14] = api - i[4] - i[12] - (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            result[7] = result[15] = ami - (i[4] - i[12]).TimesMinusI() + (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()).TimesMinusI();
+
+            result[0] += tmp;
+            result[8] -= tmp;
+
+            result[1] += tmp3[1];
+            result[9] -= tmp3[1];
+
+            result[2] += tmp3[2];
+            result[10] -= tmp3[2];
+
+            result[3] -= tmp3[3];
+            result[11] += tmp3[3];
+
+            result[4] += tmp3[4];
+            result[12] -= tmp3[4];
+
+            result[5] += tmp3[5];
+            result[13] -= tmp3[5];
+
+            result[6] -= tmp3[6];
+            result[14] += tmp3[6];
+
+            result[7] += tmp3[7];
+            result[15] -= tmp3[7];
+
+            return result;
+        }
+
         public static ComplexFloat[] Kernel16(ComplexFloat[] i, ref ComplexFloat[][] omegas)
         {
             ComplexFloat[] result = new ComplexFloat[16];
@@ -125,6 +186,61 @@ namespace FastFourierTransform
             ComplexFloat api = i[0] + i[8];
             ComplexFloat fmn = i[5] - i[13];
             ComplexFloat fpn = i[5] + i[13];
+
+            tmp3[0] = i[1] + i[3] + i[5] + i[7] + i[9] + i[11] + i[13] + i[15];
+            tmp3[1] = omegas[4][1] * (i[1] - i[9] + (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI());
+            tmp3[2] = omegas[4][2] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() + i[1] - fpn + i[9]);
+            tmp3[3] = omegas[4][3] * (omegas[3][3] * (i[11] - i[3] + (i[7] - i[15]).TimesMinusI()) - i[1] + i[9] + (fmn).TimesMinusI());
+            tmp3[4] = (i[1] - i[3] + fpn - i[7] + i[9] - i[11] - i[15]).TimesMinusI();
+            tmp3[5] = (i[1] - i[9] - (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI()) * omegas[4][5];
+            tmp3[6] = omegas[4][6] * ((i[3] - i[7] + i[11] - i[15]).TimesMinusI() - i[1] + fpn - i[9]);
+            tmp3[7] = omegas[4][7] * ((i[11] - i[3] + (i[7] - i[15]).TimesMinusI()).TimesMinusI() + i[1] - i[9] - (fmn).TimesMinusI());
+
+            result[0] = result[8] = api + i[2] + i[4] + i[6] + i[10] + i[12] + i[14];
+            result[1] = result[9] = ami + (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            result[2] = result[10] = api - i[4] - i[12] + (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            result[3] = result[11] = ami - (i[4] - i[12]).TimesMinusI() - (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()) * omegas[3][3];
+            result[4] = result[12] = api - i[2] + i[4] - i[6] - i[10] + i[12] - i[14];
+            result[5] = result[13] = ami - (i[2] - i[10] + (i[6] - i[14]).TimesMinusI()) * omegas[3][1] + (i[4] - i[12]).TimesMinusI();
+            result[6] = result[14] = api - i[4] - i[12] - (i[2] - i[6] + i[10] - i[14]).TimesMinusI();
+            result[7] = result[15] = ami - (i[4] - i[12]).TimesMinusI() + (i[10] - i[2] + (i[6] - i[14]).TimesMinusI()).TimesMinusI();
+
+            result[0] += tmp3[0];
+            result[8] -= tmp3[0];
+
+            result[1] += tmp3[1];
+            result[9] -= tmp3[1];
+
+            result[2] += tmp3[2];
+            result[10] -= tmp3[2];
+
+            result[3] -= tmp3[3];
+            result[11] += tmp3[3];
+
+            result[4] += tmp3[4];
+            result[12] -= tmp3[4];
+
+            result[5] += tmp3[5];
+            result[13] -= tmp3[5];
+
+            result[6] -= tmp3[6];
+            result[14] += tmp3[6];
+
+            result[7] += tmp3[7];
+            result[15] -= tmp3[7];
+
+            return result;
+        }
+
+        public static ComplexDouble[] Kernel16(ComplexDouble[] i, ref ComplexDouble[][] omegas)
+        {
+            ComplexDouble[] result = new ComplexDouble[16];
+            ComplexDouble[] tmp3 = new ComplexDouble[8];
+
+            ComplexDouble ami = i[0] - i[8];
+            ComplexDouble api = i[0] + i[8];
+            ComplexDouble fmn = i[5] - i[13];
+            ComplexDouble fpn = i[5] + i[13];
 
             tmp3[0] = i[1] + i[3] + i[5] + i[7] + i[9] + i[11] + i[13] + i[15];
             tmp3[1] = omegas[4][1] * (i[1] - i[9] + (i[3] - i[11] + (i[7] - i[15]).TimesMinusI()) * omegas[3][1] + (fmn).TimesMinusI());

@@ -9,6 +9,47 @@ namespace FastFourierTransform
 {
     public static class Helpers
     {
+        public static T[,] ShiftMiddle<T>(T[,] input)
+        {
+            int h = input.GetLength(0), w = input.GetLength(1);
+
+            T[,] output = new T[h, w];
+
+            for (int i = 0; i < h / 2; i++)
+            {
+                for (int j = 0; j < w / 2; j++)
+                {
+                    output[i,j] = input[i + h/2, j+h/2];
+                }
+            }
+
+            for (int i = 0; i < h / 2; i++)
+            {
+                for (int j = w / 2; j < w; j++)
+                {
+                    output[i,j] = input[i+h/2, j-h/2];
+                }
+            }
+
+            for (int i = h / 2; i < h; i++)
+            {
+                for (int j = 0; j < w / 2; j++)
+                {
+                    output[i,j] = input[i - h / 2, j+h/2];
+                }
+            }
+
+            for (int i = h / 2; i < h; i++)
+            {
+                for (int j = w / 2; j < w; j++)
+                {
+                    output[i, j] = input[i - h / 2, j - w / 2];
+                }
+            }
+
+            return output;
+        }
+
         public static bool CheckIfPowerOfTwo(int n)
         {
             if (n == 1) return true;
@@ -25,6 +66,23 @@ namespace FastFourierTransform
         {
             int heigth = data.Length / (4 * width);
             ComplexFloat[,] result = new ComplexFloat[heigth, width];
+            int position;
+            for (int i = 0; i < heigth; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    position = i * width * 4 + 4 * j;
+                    result[i, j] = ((float)data[position] + data[position + 1] + data[position + 2]) / 3;
+                }
+            }
+
+            return result;
+        }
+
+        public static ComplexDouble[,] ImportFromRGBDouble(byte[] data, int width)
+        {
+            int heigth = data.Length / (4 * width);
+            ComplexDouble[,] result = new ComplexDouble[heigth, width];
             int position;
             for (int i = 0; i < heigth; i++)
             {
