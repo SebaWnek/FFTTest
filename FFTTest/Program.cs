@@ -178,17 +178,23 @@ namespace FFTTest
 
 
 
-
         }
 
         private static void TestFloat()
         {
             byte[] data = GetBytes().GetAwaiter().GetResult();
-            int width = 512;
+            int width = (int)Math.Sqrt(data.Length/4);
 
             ComplexFloat[,] result = Helpers.ImportFromRGB(data, width);
-            ComplexFloat[,] fft = FFTParallelOptimised.FFT(result);
-            float[,] ifft = FFTParallelOptimised.IFFT(fft);
+
+            stopwatch.Restart();
+
+            ComplexFloat[,] fft = FFTParallelOptimisedSingle.FFT(result);
+            float[,] ifft = FFTParallelOptimisedSingle.IFFT(fft);
+
+            stopwatch.Stop();
+            t1 = stopwatch.ElapsedMilliseconds;
+
             byte[] fftBytes = FloatToByte(Helpers.ShiftMiddle( fft.Log(2)));
             byte[] bytes = FloatToByte(ifft);
 
@@ -197,10 +203,12 @@ namespace FFTTest
 
             Console.WriteLine("Result: " + sum1 / sum2);
 
+            //Print(fftBytes);
             //Print(ifft);
 
             PrintImage(width, fftBytes, "img1fft.bmp");
             PrintImage(width, bytes, "img1returned.bmp");
+            Console.WriteLine(t1);
         }
 
 
@@ -208,11 +216,18 @@ namespace FFTTest
         private static void TestDouble()
         {
             byte[] data = GetBytes().GetAwaiter().GetResult();
-            int width = 512;
+            int width = (int)Math.Sqrt(data.Length / 4);
 
             ComplexDouble[,] result = Helpers.ImportFromRGBDouble(data, width);
-            ComplexDouble[,] fft = FFTParallelOptimised.FFT(result);
-            double[,] ifft = FFTParallelOptimised.IFFT(fft);
+
+            stopwatch.Restart();
+            
+            ComplexDouble[,] fft = FFTParallelOptimisedDouble.FFT(result);
+            double[,] ifft = FFTParallelOptimisedDouble.IFFT(fft);
+
+            stopwatch.Stop();
+            t1 = stopwatch.ElapsedMilliseconds;
+
             byte[] fftBytes = DoubleToByte(Helpers.ShiftMiddle(fft.Log(2)));
             byte[] bytes = DoubleToByte(ifft);
 
@@ -221,11 +236,13 @@ namespace FFTTest
 
             Console.WriteLine("Result: " + sum1 / sum2);
 
+            //Print(fftBytes);
             //Print(ifft);
 
 
             PrintImage(width, fftBytes, "img2fft.bmp");
-            PrintImage(width, bytes, "img2returned.bmp");
+            PrintImage(width, bytes, "img2returned.bmp"); 
+            Console.WriteLine(t1);
         }
 
         private static void PrintImage(int width, byte[] bytes, string fileName)
@@ -275,13 +292,17 @@ namespace FFTTest
         private static byte[] DoubleToByte(double[,] ifft)
         {
             byte[] result = new byte[ifft.Length * 4];
+            byte tmp2;
+            int tmp;
             for (int i = 0; i < ifft.GetLength(0); i++)
             {
                 for (int j = 0; j < ifft.GetLength(1); j++)
                 {
-                    result[4 * i * ifft.GetLength(0) + 4 * j] = (byte)Math.Round(ifft[i, j]);
-                    result[4 * i * ifft.GetLength(0) + 4 * j + 1] = (byte)Math.Round(ifft[i, j]);
-                    result[4 * i * ifft.GetLength(0) + 4 * j + 2] = (byte)Math.Round(ifft[i, j]);
+                    tmp = (int)Math.Round(ifft[i, j]);
+                    tmp2 = (byte)(tmp < 0 ? 0 : tmp > 255 ? 255 : tmp);
+                    result[4 * i * ifft.GetLength(0) + 4 * j] = tmp2;
+                    result[4 * i * ifft.GetLength(0) + 4 * j + 1] = tmp2;
+                    result[4 * i * ifft.GetLength(0) + 4 * j + 2] = tmp2;
                     result[4 * i * ifft.GetLength(0) + 4 * j + 3] = 255;
                 }
             }
@@ -295,7 +316,11 @@ namespace FFTTest
 
             HttpClient client = new HttpClient();
 
-            image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/fft.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/fft.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/cartest.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/horse.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/nastia.jpg")));
+            image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/suknia.jpg")));
             client.Dispose();
             Rectangle rectanle = new Rectangle(0, 0, image.Width, image.Height);
             BitmapData data = image.LockBits(rectanle, ImageLockMode.ReadWrite, image.PixelFormat);
@@ -387,7 +412,7 @@ namespace FFTTest
             float[] test = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2, 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
             float[] tmp = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
             float[] tmp2 = new float[] { 1, 2, 3, 4, 4, 3, 2, 1 };
-            ComplexFloat[] resultAvx = FFTParallelOptimised.FFT(test);
+            ComplexFloat[] resultAvx = FFTParallelOptimisedSingle.FFT(test);
             Print(resultAvx, true);
         }
 
@@ -396,22 +421,22 @@ namespace FFTTest
             float[] tmp = new float[] { 1, 2, 3, 4, 4, 3, 2, 1, 0, 6, 4, 3, 1, 11, 14, 2 };
             ComplexFloat[] test = tmp.Convert();
 
-            FFTParallelOptimised.omegas = OmegaCalculator.GenerateOmegas(4);
+            FFTParallelOptimisedSingle.omegas = OmegaCalculatorSingle.GenerateOmegas(4);
             stopwatch.Start();
-            Print(FFTOptimisedKernels.Kernel16(tmp, ref FFTParallelOptimised.omegas), true);
+            Print(FFTOptimisedKernelsSingle.Kernel16(tmp, ref FFTParallelOptimisedSingle.omegas), true);
             for (int i = 0; i < 1000; i++)
             {
-                FFTOptimisedKernels.Kernel16(tmp, ref FFTParallelOptimised.omegas);
+                FFTOptimisedKernelsSingle.Kernel16(tmp, ref FFTParallelOptimisedSingle.omegas);
             }
             stopwatch.Stop();
             t1 = stopwatch.ElapsedTicks;
 
             Console.WriteLine();
             stopwatch.Restart();
-            Print(FFTParallelOptimised.FFT(tmp, false), true);
+            Print(FFTParallelOptimisedSingle.FFT(tmp, false), true);
             for (int i = 0; i < 1000; i++)
             {
-                FFTParallelOptimised.FFT(tmp, false);
+                FFTParallelOptimisedSingle.FFT(tmp, false);
             }
             stopwatch.Stop();
             t2 = stopwatch.ElapsedTicks;
@@ -421,16 +446,16 @@ namespace FFTTest
 
         private static void TestOmegas()
         {
-            Print(OmegaCalculator.CalculateOmegasRowBasic(32), true);
+            Print(OmegaCalculatorSingle.CalculateOmegasRowBasic(32), true);
             Console.WriteLine();
-            Print(OmegaCalculator.CalculateOmegasRowOptimised(32), true);
+            Print(OmegaCalculatorSingle.CalculateOmegasRowOptimised(32), true);
             for (int n = 2; n < 12; n++)
             {
                 int k = (int)Math.Pow(2, n);
                 stopwatch.Restart();
                 for (int i = 0; i < 1000; i++)
                 {
-                    OmegaCalculator.CalculateOmegasRowBasic(k);
+                    OmegaCalculatorSingle.CalculateOmegasRowBasic(k);
                 }
                 stopwatch.Stop();
                 t1 = stopwatch.ElapsedMilliseconds;
@@ -438,7 +463,7 @@ namespace FFTTest
                 stopwatch.Restart();
                 for (int i = 0; i < 1000; i++)
                 {
-                    OmegaCalculator.CalculateOmegasRowOptimised(k);
+                    OmegaCalculatorSingle.CalculateOmegasRowOptimised(k);
                 }
                 stopwatch.Stop();
                 t3 = stopwatch.ElapsedMilliseconds;
@@ -492,13 +517,13 @@ namespace FFTTest
             Console.WriteLine(t4 + "ms");
 
             stopwatch.Restart();
-            ComplexFloat[,] resultAvx = FFTParallelOptimised.FFT(test);
+            ComplexFloat[,] resultAvx = FFTParallelOptimisedSingle.FFT(test);
             stopwatch.Stop();
             t5 = stopwatch.ElapsedMilliseconds;
             Console.WriteLine(t5 + "ms");
 
             stopwatch.Restart();
-            float[,] resultAvx2 = FFTParallelOptimised.IFFT(resultAvx);
+            float[,] resultAvx2 = FFTParallelOptimisedSingle.IFFT(resultAvx);
             stopwatch.Stop();
             t6 = stopwatch.ElapsedMilliseconds;
             Console.WriteLine(t6 + "ms");

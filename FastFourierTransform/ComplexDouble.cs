@@ -18,6 +18,7 @@ namespace FastFourierTransform
             real = re;
             imaginary = im;
         }
+
         public ComplexDouble(double re)
         {
             real = re;
@@ -26,7 +27,9 @@ namespace FastFourierTransform
 
 
         public static implicit operator ComplexDouble(double x) => new ComplexDouble(x);
+        public static implicit operator ComplexDouble(ComplexFloat x) => new ComplexDouble(x.Re, x.Im);
         public static explicit operator double(ComplexDouble x) => x.real;
+
         public static bool operator ==(ComplexDouble x, ComplexDouble y) => x.real == y.real && x.imaginary == y.imaginary;
         public static bool operator !=(ComplexDouble x, ComplexDouble y) => x.real != y.real || x.imaginary != y.imaginary;
         public static bool operator >(ComplexDouble x, ComplexDouble y) => throw new InvalidOperationException("Operation not vlid for complex numbers");
@@ -34,24 +37,20 @@ namespace FastFourierTransform
         public static bool operator >=(ComplexDouble x, ComplexDouble y) => throw new InvalidOperationException("Operation not vlid for complex numbers");
         public static bool operator <=(ComplexDouble x, ComplexDouble y) => throw new InvalidOperationException("Operation not vlid for complex numbers");
         public static ComplexDouble operator +(ComplexDouble x) => x;
-        public static ComplexDouble operator -(ComplexDouble x) => new ComplexDouble(-x.real, -x.imaginary);
         public static ComplexDouble operator +(ComplexDouble x, ComplexDouble y) => new ComplexDouble(x.real + y.real, x.imaginary + y.imaginary);
-        public static ComplexDouble operator -(ComplexDouble x, ComplexDouble y) => new ComplexDouble(x.real - y.real, x.imaginary - y.imaginary);
-        public static ComplexDouble operator *(ComplexDouble x, ComplexDouble y) => new ComplexDouble(x.real * y.real - x.imaginary * y.imaginary, x.real * y.imaginary - x.imaginary * y.real);
-        public static ComplexDouble operator /(ComplexDouble x, ComplexDouble y) => x * y.Reciprocal();
         public static ComplexDouble operator +(ComplexDouble x, double y) => new ComplexDouble(x.real + y, x.imaginary);
+        public static ComplexDouble operator -(ComplexDouble x) => new ComplexDouble(-x.real, -x.imaginary);
+        public static ComplexDouble operator -(ComplexDouble x, ComplexDouble y) => new ComplexDouble(x.real - y.real, x.imaginary - y.imaginary);
         public static ComplexDouble operator -(ComplexDouble x, double y) => new ComplexDouble(x.real - y, x.imaginary);
+        public static ComplexDouble operator *(ComplexDouble x, ComplexDouble y) => new ComplexDouble(x.real * y.real - x.imaginary * y.imaginary, x.real * y.imaginary + x.imaginary * y.real);
         public static ComplexDouble operator *(ComplexDouble x, double y) => new ComplexDouble(x.real * y, x.imaginary * y);
+        public static ComplexDouble operator /(ComplexDouble x, ComplexDouble y) => x * y.Reciprocal();
         public static ComplexDouble operator /(ComplexDouble x, double y) => new ComplexDouble(x.real / y, x.imaginary / y);
         public static ComplexDouble operator ^(ComplexDouble x, int y) => x.Pow(y);
 
         public ComplexDouble Reciprocal() => new ComplexDouble(real / (real * real + imaginary * imaginary), -imaginary / (real * real + imaginary * imaginary));
         public ComplexDouble Conjugate() => new ComplexDouble(real, -imaginary);
 
-        public override string ToString()
-        {
-            return $"{real} + {imaginary}i";
-        }
 
         public ComplexDouble TimesMinusI() => new ComplexDouble(imaginary, -real);
         public ComplexDouble TimesI() => new ComplexDouble(-imaginary, real);
@@ -77,9 +76,32 @@ namespace FastFourierTransform
 
         }
 
+        public override string ToString()
+        {
+            return $"{real} + {imaginary}i";
+        }
+
         public override int GetHashCode()
         {
             return (real + imaginary).GetHashCode();
+        }
+
+        public static ComplexDouble[,] FromSingle(ComplexFloat[,] single)
+        {
+            int rows = single.GetLength(0);
+            int cols = single.GetLength(1);
+
+            ComplexDouble[,] result = new ComplexDouble[rows, cols];
+
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    result[i, j] = (ComplexDouble)single[i, j];
+                }
+            }
+
+            return result;
         }
     }
 }

@@ -89,7 +89,7 @@ namespace FastFourierTransform
                 for (int j = 0; j < width; j++)
                 {
                     position = i * width * 4 + 4 * j;
-                    result[i, j] = ((float)data[position] + data[position + 1] + data[position + 2]) / 3;
+                    result[i, j] = (data[position] + data[position + 1] + data[position + 2]) / 3;
                 }
             }
 

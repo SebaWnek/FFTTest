@@ -126,7 +126,7 @@ namespace FastFourierTransform
             if (generateMapOmegas)
             {
                 map = BitReverse.GenerateMap(k);
-                omegas = OmegaCalculator.GenerateOmegas(k);
+                omegas = OmegaCalculatorSingle.GenerateOmegas(k);
             }
 
             result = ShuffleNumbers(input, true);

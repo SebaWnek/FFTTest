@@ -142,11 +142,13 @@ namespace FastFourierTransform
         public static double[,] Log(this ComplexDouble[,] x, double b = 2)
         {
             double tmpMax = 0;
-
             double max = 255;
+
             int rows = x.GetLength(0);
             int cols = x.GetLength(1);
+
             double[,] result = new double[rows, cols];
+
             for(int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
@@ -173,9 +175,12 @@ namespace FastFourierTransform
         {
             float tmpMax = 0;
             float max = 255;
+
             int rows = x.GetLength(0);
             int cols = x.GetLength(1);
+
             float[,] result = new float[rows, cols];
+
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
