@@ -173,11 +173,47 @@ namespace FFTTest
             //Console.WriteLine($"Basic: {t1}\nThreads: {t2} {t1 / t2}x\nParallel: {t3} {t1 / t3}x");
             #endregion
 
-            TestDouble();
             TestFloat();
+            Thread.Sleep(1000);
+            TestDouble();
+            Thread.Sleep(1000);
+            TestDoubleExtra();
+
+            //TestTranspose();
 
 
 
+        }
+
+        private static void TestTranspose()
+        {
+            ComplexDouble[,] test = FillRandomDouble(2048, 2048).Convert();
+
+            ComplexDouble[,] result;
+
+            stopwatch.Start();
+
+            for (int i = 0; i < 100; i++)
+            {
+                FFTParallelOptimisedDoubleExtra.Transpose(ref test, out result); 
+            }
+
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.ElapsedMilliseconds);  
+
+            //Print(result);
+
+            stopwatch.Restart();
+
+            for (int i = 0; i < 100; i++)
+            {
+                result = FFTParallelOptimisedDoubleExtra.TransposeBasic(test); 
+            }
+
+            stopwatch.Stop();
+            //Print(result);
+
+            Console.WriteLine(stopwatch.ElapsedMilliseconds);
         }
 
         private static void TestFloat()
@@ -242,6 +278,38 @@ namespace FFTTest
 
             PrintImage(width, fftBytes, "img2fft.bmp");
             PrintImage(width, bytes, "img2returned.bmp"); 
+            Console.WriteLine(t1);
+        }
+
+        private static void TestDoubleExtra()
+        {
+            byte[] data = GetBytes().GetAwaiter().GetResult();
+            int width = (int)Math.Sqrt(data.Length / 4);
+
+            ComplexDouble[,] result = Helpers.ImportFromRGBDouble(data, width);
+
+            stopwatch.Restart();
+
+            ComplexDouble[,] fft = FFTParallelOptimisedDoubleExtra.FFT(result);
+            double[,] ifft = FFTParallelOptimisedDoubleExtra.IFFT(fft);
+
+            stopwatch.Stop();
+            t1 = stopwatch.ElapsedMilliseconds;
+
+            byte[] fftBytes = DoubleToByte(Helpers.ShiftMiddle(fft.Log(2)));
+            byte[] bytes = DoubleToByte(ifft);
+
+            double sum1 = PrintSum(result);
+            double sum2 = PrintSum(ifft);
+
+            Console.WriteLine("Result: " + sum1 / sum2);
+
+            //Print(fftBytes);
+            //Print(ifft);
+
+
+            PrintImage(width, fftBytes, "img3fft.bmp");
+            PrintImage(width, bytes, "img3returned.bmp");
             Console.WriteLine(t1);
         }
 
@@ -319,8 +387,12 @@ namespace FFTTest
             //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/fft.jpg")));
             //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/cartest.jpg")));
             //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/horse.jpg")));
-            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/nastia.jpg")));
-            image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/suknia.jpg")));
+            image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/nastia.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/suknia.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/nastiabig.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/cameraman.jpg")));
+            //image = new Bitmap(Image.FromStream(await client.GetStreamAsync("https://wnekofoty.pl/asia.jpg")));
+
             client.Dispose();
             Rectangle rectanle = new Rectangle(0, 0, image.Width, image.Height);
             BitmapData data = image.LockBits(rectanle, ImageLockMode.ReadWrite, image.PixelFormat);
