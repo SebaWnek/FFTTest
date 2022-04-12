@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -20,7 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FastFourierTransform\FastFourierTransform.csproj" />
+    <ProjectReference Include="..\FastFourierTransform\FastFourierTransformTmp.csproj" />
+    <ProjectReference Include="..\FFT\FFT.csproj" />
   </ItemGroup>
 
 </Project>

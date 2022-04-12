@@ -1,4 +1,5 @@
 ﻿using FastFourierTransform;
+using FFT;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -221,7 +222,7 @@ namespace FFTTest
             byte[] data = GetBytes().GetAwaiter().GetResult();
             int width = (int)Math.Sqrt(data.Length/4);
 
-            ComplexFloat[,] result = Helpers.ImportFromRGB(data, width);
+            ComplexFloat[,] result = FastFourierTransform.Helpers.ImportFromRGB(data, width);
 
             stopwatch.Restart();
 
@@ -231,7 +232,7 @@ namespace FFTTest
             stopwatch.Stop();
             t1 = stopwatch.ElapsedMilliseconds;
 
-            byte[] fftBytes = FloatToByte(Helpers.ShiftMiddle( fft.Log(2)));
+            byte[] fftBytes = FloatToByte(FastFourierTransform.Helpers.ShiftMiddle( fft.Log(2)));
             byte[] bytes = FloatToByte(ifft);
 
             double sum1 = PrintSum(result);
@@ -254,17 +255,17 @@ namespace FFTTest
             byte[] data = GetBytes().GetAwaiter().GetResult();
             int width = (int)Math.Sqrt(data.Length / 4);
 
-            ComplexDouble[,] result = Helpers.ImportFromRGBDouble(data, width);
+            Complex[,] result = FFT.Helpers.ImportFromArgbBitmap(data, width);
 
             stopwatch.Restart();
             
-            ComplexDouble[,] fft = FFTParallelOptimisedDouble.FFT(result);
-            double[,] ifft = FFTParallelOptimisedDouble.IFFT(fft);
+            Complex[,] fft = FFT.MainMethods.FFT(result);
+            double[,] ifft = FFT.MainMethods.IFFT(fft);
 
             stopwatch.Stop();
             t1 = stopwatch.ElapsedMilliseconds;
 
-            byte[] fftBytes = DoubleToByte(Helpers.ShiftMiddle(fft.Log(2)));
+            byte[] fftBytes = DoubleToByte(FFT.Helpers.ShiftToMiddle(fft.FitTo8Bits(2)));
             byte[] bytes = DoubleToByte(ifft);
 
             double sum1 = PrintSum(result);
@@ -286,7 +287,7 @@ namespace FFTTest
             byte[] data = GetBytes().GetAwaiter().GetResult();
             int width = (int)Math.Sqrt(data.Length / 4);
 
-            ComplexDouble[,] result = Helpers.ImportFromRGBDouble(data, width);
+            ComplexDouble[,] result = FastFourierTransform.Helpers.ImportFromRGBDouble(data, width);
 
             stopwatch.Restart();
 
@@ -296,7 +297,7 @@ namespace FFTTest
             stopwatch.Stop();
             t1 = stopwatch.ElapsedMilliseconds;
 
-            byte[] fftBytes = DoubleToByte(Helpers.ShiftMiddle(fft.Log(2)));
+            byte[] fftBytes = DoubleToByte(FastFourierTransform.Helpers.ShiftMiddle(fft.Log(2)));
             byte[] bytes = DoubleToByte(ifft);
 
             double sum1 = PrintSum(result);
@@ -461,6 +462,24 @@ namespace FFTTest
         }
 
         private static double PrintSum(ComplexDouble[,] result)
+        {
+            int rows = result.GetLength(0);
+            int cols = result.GetLength(1);
+
+            double tmpSum = 0;
+
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    tmpSum += result[i, j].Abs();
+                }
+            }
+
+            Console.WriteLine(tmpSum);
+            return tmpSum;
+        }
+        private static double PrintSum(Complex[,] result)
         {
             int rows = result.GetLength(0);
             int cols = result.GetLength(1);
